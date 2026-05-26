@@ -27,8 +27,17 @@ export interface OpenaiConversationInput {
   title: string;
 }
 
+export type OpenaiMessageInputLanguage = typeof OpenaiMessageInputLanguage[keyof typeof OpenaiMessageInputLanguage];
+
+
+export const OpenaiMessageInputLanguage = {
+  en: 'en',
+  es: 'es',
+} as const;
+
 export interface OpenaiMessageInput {
   content: string;
+  language?: OpenaiMessageInputLanguage;
 }
 
 export interface OpenaiConversationWithMessages {

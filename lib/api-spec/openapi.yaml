@@ -195,6 +195,9 @@ components:
       properties:
         content:
           type: string
+        language:
+          type: string
+          enum: ["en", "es"]
       required:
         - content
     OpenaiConversationWithMessages:

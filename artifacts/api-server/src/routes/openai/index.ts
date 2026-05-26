@@ -14,7 +14,7 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router = Router();
 
-const PSALM_SYSTEM_PROMPT = `You are PsalmGuide — a warm, gentle spiritual companion. Your role is to listen to how someone's day has been and recommend a fitting psalm from the Bible.
+const BASE_SYSTEM_PROMPT = `You are PsalmGuide — a warm, gentle spiritual companion. Your role is to listen to how someone's day has been and recommend a fitting psalm from the Bible.
 
 Your conversation style:
 - Speak warmly and with genuine care, like a trusted pastor or chaplain
@@ -39,6 +39,16 @@ Important guidelines:
 - Keep your conversational messages brief and warm (2-4 sentences)
 - Do not use emojis
 - After the psalm card, you may add a brief closing sentence of encouragement`;
+
+const LANGUAGE_INSTRUCTION: Record<string, string> = {
+  es: `IMPORTANT: You must respond entirely in Spanish. All your messages, including the psalm reference label, verse text, and reflection, must be written in Spanish. Use "Salmo" instead of "Psalm" in the Reference field (e.g. "Reference: Salmo 23"). The verse text should be from a standard Spanish Bible translation (RVR1960 or similar).`,
+  en: `Respond in English.`,
+};
+
+function buildSystemPrompt(language: string): string {
+  const instruction = LANGUAGE_INSTRUCTION[language] ?? LANGUAGE_INSTRUCTION.en;
+  return `${BASE_SYSTEM_PROMPT}\n\nLanguage instruction: ${instruction}`;
+}
 
 router.get("/conversations", async (req, res) => {
   try {
@@ -164,6 +174,7 @@ router.post("/conversations/:id/messages", async (req, res) => {
 
   const conversationId = paramsParsed.data.id;
   const userContent = bodyParsed.data.content;
+  const language = bodyParsed.data.language ?? "en";
 
   try {
     const [conv] = await db
@@ -188,7 +199,7 @@ router.post("/conversations/:id/messages", async (req, res) => {
       .orderBy(asc(messages.createdAt));
 
     const chatMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
-      { role: "system", content: PSALM_SYSTEM_PROMPT },
+      { role: "system", content: buildSystemPrompt(language) },
       ...history.map((m) => ({
         role: m.role as "user" | "assistant",
         content: m.content,

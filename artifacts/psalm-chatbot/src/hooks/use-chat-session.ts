@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useCreateOpenaiConversation } from '@workspace/api-client-react';
 
+export type Language = 'en' | 'es';
+
 export type Message = {
   id: string;
   role: 'user' | 'assistant';
@@ -8,17 +10,24 @@ export type Message = {
   createdAt: string;
 };
 
-export function useChatSession() {
+const WELCOME: Record<Language, string> = {
+  en: 'Welcome. Take a deep breath. How is your heart today?',
+  es: 'Bienvenido. Respira hondo. ¿Cómo está tu corazón hoy?',
+};
+
+const ERROR_MSG: Record<Language, string> = {
+  en: "I'm sorry, I'm having trouble connecting right now. Please try again.",
+  es: 'Lo siento, tengo problemas para conectarme ahora mismo. Por favor, inténtalo de nuevo.',
+};
+
+export function useChatSession(language: Language) {
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const createConv = useCreateOpenaiConversation();
   const initialized = useRef(false);
 
-  useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-
+  const startSession = useCallback((lang: Language) => {
     createConv.mutateAsync({ data: { title: 'My Day' } })
       .then((conv) => {
         setConversationId(conv.id);
@@ -26,7 +35,7 @@ export function useChatSession() {
           {
             id: 'welcome',
             role: 'assistant',
-            content: 'Welcome. Take a deep breath. How is your heart today?',
+            content: WELCOME[lang],
             createdAt: new Date().toISOString(),
           },
         ]);
@@ -36,26 +45,17 @@ export function useChatSession() {
       });
   }, []);
 
-  const initSession = useCallback(() => {
-    initialized.current = false;
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+    startSession(language);
+  }, []);
+
+  const initSession = useCallback((lang: Language) => {
     setConversationId(null);
     setMessages([]);
-    createConv.mutateAsync({ data: { title: 'My Day' } })
-      .then((conv) => {
-        setConversationId(conv.id);
-        setMessages([
-          {
-            id: 'welcome',
-            role: 'assistant',
-            content: 'Welcome. Take a deep breath. How is your heart today?',
-            createdAt: new Date().toISOString(),
-          },
-        ]);
-      })
-      .catch((err) => {
-        console.error('Failed to start new session', err);
-      });
-  }, []);
+    startSession(lang);
+  }, [startSession]);
 
   const sendMessage = async (content: string) => {
     if (!conversationId) return;
@@ -79,7 +79,7 @@ export function useChatSession() {
       const res = await fetch(`/api/openai/conversations/${conversationId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, language }),
       });
 
       if (!res.ok) throw new Error('Failed to send message');
@@ -120,7 +120,7 @@ export function useChatSession() {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMsgId
-            ? { ...m, content: "I'm sorry, I'm having trouble connecting right now. Please try again." }
+            ? { ...m, content: ERROR_MSG[language] }
             : m
         )
       );
