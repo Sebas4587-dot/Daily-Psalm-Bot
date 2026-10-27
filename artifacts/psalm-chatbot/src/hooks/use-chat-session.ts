@@ -24,44 +24,56 @@ export function useChatSession(language: Language) {
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const createConv = useCreateOpenaiConversation();
-  const initialized = useRef(false);
+  const sessionGeneration = useRef(0);
 
-  const startSession = useCallback((lang: Language) => {
-    createConv.mutateAsync({ data: { title: 'My Day' } })
-      .then((conv) => {
-        setConversationId(conv.id);
-        setMessages([
-          {
-            id: 'welcome',
-            role: 'assistant',
-            content: WELCOME[lang],
-            createdAt: new Date().toISOString(),
-          },
-        ]);
-      })
-      .catch((err) => {
-        console.error('Failed to init session', err);
-      });
-  }, []);
-
-  useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-    startSession(language);
-  }, []);
-
-  const initSession = useCallback((lang: Language) => {
+  const startSession = useCallback(async (lang: Language) => {
+    const generation = ++sessionGeneration.current;
+    setIsInitializing(true);
+    setIsStreaming(false);
+    setSessionError(null);
     setConversationId(null);
     setMessages([]);
+
+    try {
+      const conv = await createConv.mutateAsync({ data: { title: 'My Day' } });
+      if (generation !== sessionGeneration.current) return;
+      setConversationId(conv.id);
+      setMessages([
+        {
+          id: 'welcome',
+          role: 'assistant',
+          content: WELCOME[lang],
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+    } catch (err) {
+      if (generation !== sessionGeneration.current) return;
+      console.error('Failed to init session', err);
+      setSessionError(ERROR_MSG[lang]);
+    } finally {
+      if (generation === sessionGeneration.current) {
+        setIsInitializing(false);
+      }
+    }
+  }, [createConv.mutateAsync]);
+
+  useEffect(() => {
+    startSession(language);
+  }, [startSession]);
+
+  const initSession = useCallback((lang: Language) => {
     startSession(lang);
   }, [startSession]);
 
   const sendMessage = async (content: string) => {
-    if (!conversationId) return;
+    if (!conversationId || isInitializing || isStreaming) return;
+    const generation = sessionGeneration.current;
 
     const userMsg: Message = {
-      id: Date.now().toString(),
+      id: `user-${Date.now()}`,
       role: 'user',
       content,
       createdAt: new Date().toISOString(),
@@ -69,7 +81,7 @@ export function useChatSession(language: Language) {
     setMessages((prev) => [...prev, userMsg]);
     setIsStreaming(true);
 
-    const assistantMsgId = (Date.now() + 1).toString();
+    const assistantMsgId = `assistant-${Date.now()}`;
     setMessages((prev) => [
       ...prev,
       { id: assistantMsgId, role: 'assistant', content: '', createdAt: new Date().toISOString() },
@@ -88,46 +100,75 @@ export function useChatSession(language: Language) {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let fullContent = '';
+      let buffer = '';
+      let streamError: string | null = null;
 
       while (true) {
         const { value, done } = await reader.read();
-        if (done) break;
+        buffer += decoder.decode(value, { stream: !done });
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
+        let eventBoundary = buffer.indexOf('\n\n');
+        while (eventBoundary !== -1) {
+          const event = buffer.slice(0, eventBoundary);
+          buffer = buffer.slice(eventBoundary + 2);
+          const dataStr = event
+            .split(/\r?\n/)
+            .filter((line) => line.startsWith('data:'))
+            .map((line) => line.slice(5).trimStart())
+            .join('\n');
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataStr = line.slice(6).trim();
-            if (!dataStr) continue;
+          if (dataStr) {
             try {
               const data = JSON.parse(dataStr);
-              if (data.done) break;
+              if (data.error) {
+                streamError = data.error;
+                break;
+              }
               if (data.content) {
                 fullContent += data.content;
-                setMessages((prev) =>
-                  prev.map((m) => (m.id === assistantMsgId ? { ...m, content: fullContent } : m))
-                );
+                if (generation === sessionGeneration.current) {
+                  setMessages((prev) =>
+                    prev.map((m) => (m.id === assistantMsgId ? { ...m, content: fullContent } : m))
+                  );
+                }
               }
             } catch {
-              // Ignore partial JSON chunks
+              streamError = 'The response could not be read. Please try again.';
+              break;
             }
           }
+          eventBoundary = buffer.indexOf('\n\n');
         }
+
+        if (streamError || done) break;
       }
+
+      if (streamError) throw new Error(streamError);
     } catch (error) {
       console.error(error);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantMsgId
-            ? { ...m, content: ERROR_MSG[language] }
-            : m
-        )
-      );
+      if (generation === sessionGeneration.current) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsgId
+              ? { ...m, content: ERROR_MSG[language] }
+              : m
+          )
+        );
+      }
     } finally {
-      setIsStreaming(false);
+      if (generation === sessionGeneration.current) {
+        setIsStreaming(false);
+      }
     }
   };
 
-  return { conversationId, messages, sendMessage, isStreaming, initSession };
+  return {
+    conversationId,
+    messages,
+    sendMessage,
+    isStreaming,
+    isInitializing,
+    sessionError,
+    initSession,
+  };
 }
