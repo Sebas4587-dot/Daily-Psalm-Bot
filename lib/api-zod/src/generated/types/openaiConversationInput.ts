@@ -7,5 +7,9 @@
  */
 
 export interface OpenaiConversationInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
   title: string;
 }

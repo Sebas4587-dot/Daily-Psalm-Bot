@@ -18,7 +18,7 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
- * @summary List all conversations
+ * @summary List conversations owned by the current browser session
  */
 export const ListOpenaiConversationsResponseItem = zod.object({
   "id": zod.number(),
@@ -31,8 +31,12 @@ export const ListOpenaiConversationsResponse = zod.array(ListOpenaiConversations
 /**
  * @summary Create a new conversation
  */
+export const createOpenaiConversationBodyTitleMax = 120;
+
+
+
 export const CreateOpenaiConversationBody = zod.object({
-  "title": zod.string()
+  "title": zod.string().min(1).max(createOpenaiConversationBodyTitleMax)
 })
 
 
@@ -89,8 +93,12 @@ export const SendOpenaiMessageParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const sendOpenaiMessageBodyContentMax = 4000;
+
+
+
 export const SendOpenaiMessageBody = zod.object({
-  "content": zod.string(),
+  "content": zod.string().min(1).max(sendOpenaiMessageBodyContentMax),
   "language": zod.enum(['en', 'es']).optional()
 })
 

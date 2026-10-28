@@ -29,7 +29,7 @@ paths:
     get:
       operationId: listOpenaiConversations
       tags: [openai]
-      summary: List all conversations
+      summary: List conversations owned by the current browser session
       responses:
         "200":
           description: List of conversations
@@ -188,6 +188,8 @@ components:
       properties:
         title:
           type: string
+          minLength: 1
+          maxLength: 120
       required:
         - title
     OpenaiMessageInput:
@@ -195,6 +197,8 @@ components:
       properties:
         content:
           type: string
+          minLength: 1
+          maxLength: 4000
         language:
           type: string
           enum: ["en", "es"]

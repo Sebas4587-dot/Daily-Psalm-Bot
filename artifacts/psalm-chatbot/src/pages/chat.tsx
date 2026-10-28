@@ -4,6 +4,8 @@ import { useChatSession, type Language } from "@/hooks/use-chat-session";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PsalmCard } from "@/components/psalm-card";
+import { ScriptureCard } from "@/components/scripture-card";
+import { StoredGuideReplySchema, type StoredGuideReply } from "@workspace/api-zod";
 
 const UI = {
   en: {
@@ -11,10 +13,10 @@ const UI = {
     placeholder: "Share what’s on your heart…",
     typing: "A moment of quiet…",
     initializing: "Making a quiet space for you",
-    brandSubtitle: "A companion for the heart",
+    brandSubtitle: "The whole Bible · NVI",
     eyebrow: "A quiet place to begin",
     welcomeTitle: "How is your heart\ntoday?",
-    welcomeBody: "Bring whatever is with you. A worry, a small joy, or something you can’t quite name. We’ll find a Psalm for this moment.",
+    welcomeBody: "Bring whatever is with you: a worry, a small joy, or something you can’t quite name. We’ll explore passages from across the Bible, with context and a reading in the Spanish NVI.",
     promptsLabel: "You might begin with",
     prompts: ["I feel a little overwhelmed", "I’m grateful for something today", "I need comfort and hope"],
     privacy: "Share only what feels comfortable.",
@@ -31,10 +33,10 @@ const UI = {
     placeholder: "Comparte lo que llevas en el corazón…",
     typing: "Un momento de calma…",
     initializing: "Estamos preparando un espacio tranquilo",
-    brandSubtitle: "Un espacio para el corazón",
+    brandSubtitle: "Toda la Biblia · NVI",
     eyebrow: "Un lugar tranquilo para comenzar",
     welcomeTitle: "¿Cómo está tu\n corazón hoy?",
-    welcomeBody: "Trae contigo lo que sea: una preocupación, una pequeña alegría o algo que aún no sabes nombrar. Encontraremos un salmo para este momento.",
+    welcomeBody: "Trae contigo lo que sea: una preocupación, una pequeña alegría o algo que aún no sabes nombrar. Encontraremos pasajes de toda la Biblia, con su contexto y una lectura en la Nueva Versión Internacional.",
     promptsLabel: "Podrías comenzar con",
     prompts: ["Siento que todo me sobrepasa un poco", "Hoy agradezco algo", "Necesito consuelo y esperanza"],
     privacy: "Comparte solo lo que te resulte cómodo.",
@@ -49,35 +51,43 @@ const UI = {
 } as const;
 
 function parseMessage(content: string) {
+  let reply: StoredGuideReply | null = null;
+  try {
+    const parsed = StoredGuideReplySchema.safeParse(JSON.parse(content));
+    if (parsed.success) reply = parsed.data;
+  } catch { /* Earlier conversations contain plain text. */ }
+  if (reply) return { text: reply.message, psalm: null, reply };
   const parts = content.split("---PSALM_CARD---");
-  if (parts.length === 1) return { text: parts[0], psalm: null };
+  if (parts.length === 1) return { text: parts[0], psalm: null, reply };
 
   const text = parts[0].trim();
   const cardText = parts[1].trim();
   const refMatch = cardText.match(/Reference:\s*(.*)/i);
-  const verseMatch = cardText.match(/Verse:\s*"?([^"]*)"?/i);
+  const verseMatch = cardText.match(/Verse:\s*([\s\S]*?)(?=\nReflection:|$)/i);
   const refTextMatch = cardText.match(/Reflection:\s*([\s\S]*)/i);
 
   if (refMatch && verseMatch && refTextMatch) {
     return {
       text,
+      reply,
       psalm: {
         reference: refMatch[1].trim(),
-        verse: verseMatch[1].trim(),
+        verse: verseMatch[1].trim().replace(/^["“]|["”]$/g, ""),
         reflection: refTextMatch[1].trim(),
       },
     };
   }
-  return { text: content, psalm: null };
+  return { text: content, psalm: null, reply };
 }
 
 export default function Chat() {
   const [language, setLanguage] = useState<Language>(() => {
-    const savedLanguage = localStorage.getItem("psalmguide-language");
+    let savedLanguage: string | null = null;
+    try { savedLanguage = localStorage.getItem("psalmguide-language"); } catch { /* storage can be disabled */ }
     if (savedLanguage === "en" || savedLanguage === "es") return savedLanguage;
     return navigator.language.toLowerCase().startsWith("es") ? "es" : "en";
   });
-  const { messages, sendMessage, isStreaming, initSession, isInitializing, sessionError } = useChatSession(language);
+  const { messages, sendMessage, isStreaming, initSession, isInitializing, sessionError, retryMessage } = useChatSession(language);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -86,7 +96,9 @@ export default function Chat() {
   const isWelcome = conversationMessages.length === 0;
 
   useEffect(() => {
-    localStorage.setItem("psalmguide-language", language);
+    try { localStorage.setItem("psalmguide-language", language); } catch { /* storage can be disabled */ }
+    document.documentElement.lang = language;
+    document.title = language === "es" ? "Guía bíblica · NVI" : "BibleGuide · NVI";
   }, [language]);
 
   useEffect(() => {
@@ -129,7 +141,7 @@ export default function Chat() {
             <Leaf aria-hidden="true" className="h-[18px] w-[18px]" strokeWidth={1.7} />
           </div>
           <div>
-            <h1 className="font-serif text-[21px] font-semibold leading-none tracking-[-.035em] text-primary sm:text-2xl">PsalmGuide</h1>
+            <h1 className="font-serif text-[21px] font-semibold leading-none tracking-[-.035em] text-primary sm:text-2xl">{language === "es" ? "Guía bíblica" : "BibleGuide"}</h1>
             <p className="mt-1 hidden text-[10px] font-semibold uppercase tracking-[.19em] text-muted-foreground sm:block">{ui.brandSubtitle}</p>
           </div>
         </div>
@@ -223,7 +235,7 @@ export default function Chat() {
             <div className="space-y-8 py-3 sm:space-y-10" aria-live="polite" data-testid="message-thread">
               {conversationMessages.map((message) => {
                 const isUser = message.role === "user";
-                const { text, psalm } = parseMessage(message.content);
+                const { text, psalm, reply } = message.role === "assistant" ? parseMessage(message.content) : { text: message.content, psalm: null, reply: null };
                 return (
                   <article key={message.id} className={`arrive flex flex-col ${isUser ? "items-end" : "items-start"}`}>
                     {text && (
@@ -235,12 +247,23 @@ export default function Chat() {
                         }`}
                         data-testid={`${isUser ? "bubble-user" : "bubble-assistant"}-${message.id}`}
                       >
-                        <p>{text}</p>
+                        <p className="whitespace-pre-wrap">{text}</p>
                       </div>
                     )}
                     {psalm && (
                       <div className="mt-5 w-full sm:mt-6" data-testid={`psalm-card-${message.id}`}>
                         <PsalmCard {...psalm} />
+                      </div>
+                    )}
+                    {reply?.recommendations.map((recommendation, index) => (
+                      <div key={`${recommendation.book}-${recommendation.chapter}-${recommendation.verseStart}-${index}`} className="mt-5 w-full sm:mt-6">
+                        <ScriptureCard recommendation={recommendation} passage={reply.passages?.[index]} language={language} />
+                      </div>
+                    ))}
+                    {message.error && (
+                      <div className="rounded-2xl border border-destructive/20 bg-background/80 p-4 text-sm" role="alert" data-testid="message-error">
+                        <p>{message.error}</p>
+                        {retryMessage && <Button variant="outline" size="sm" onClick={retryMessage} disabled={isStreaming} className="mt-3">{ui.retry}</Button>}
                       </div>
                     )}
                   </article>
@@ -278,6 +301,7 @@ export default function Chat() {
               placeholder={ui.placeholder}
               className="max-h-32 min-h-[44px] flex-1 resize-none bg-transparent px-3 py-3 text-[14px] leading-5 text-foreground outline-none placeholder:text-muted-foreground/75 focus-visible:ring-0 sm:px-4 sm:text-[15px]"
               rows={1}
+              maxLength={4000}
               disabled={isInitializing || !!sessionError}
               data-testid="input-message"
             />

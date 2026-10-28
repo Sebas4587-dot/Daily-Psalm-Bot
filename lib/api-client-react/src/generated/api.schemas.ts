@@ -24,6 +24,10 @@ export interface OpenaiMessage {
 }
 
 export interface OpenaiConversationInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
   title: string;
 }
 
@@ -36,6 +40,10 @@ export const OpenaiMessageInputLanguage = {
 } as const;
 
 export interface OpenaiMessageInput {
+  /**
+     * @minLength 1
+     * @maxLength 4000
+     */
   content: string;
   language?: OpenaiMessageInputLanguage;
 }

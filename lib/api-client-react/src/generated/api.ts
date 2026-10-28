@@ -128,7 +128,7 @@ export const getListOpenaiConversationsUrl = () => {
 }
 
 /**
- * @summary List all conversations
+ * @summary List conversations owned by the current browser session
  */
 export const listOpenaiConversations = async ( options?: RequestInit): Promise<OpenaiConversation[]> => {
 
@@ -175,7 +175,7 @@ export type ListOpenaiConversationsQueryError = ErrorType<unknown>
 
 
 /**
- * @summary List all conversations
+ * @summary List conversations owned by the current browser session
  */
 
 export function useListOpenaiConversations<TData = Awaited<ReturnType<typeof listOpenaiConversations>>, TError = ErrorType<unknown>>(

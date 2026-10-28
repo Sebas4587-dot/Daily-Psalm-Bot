@@ -8,6 +8,10 @@
 import type { OpenaiMessageInputLanguage } from './openaiMessageInputLanguage';
 
 export interface OpenaiMessageInput {
+  /**
+     * @minLength 1
+     * @maxLength 4000
+     */
   content: string;
   language?: OpenaiMessageInputLanguage;
 }
