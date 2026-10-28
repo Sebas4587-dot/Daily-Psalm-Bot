@@ -67,6 +67,14 @@ export interface OpenaiError {
   error: string;
 }
 
+export type GetPrivacyConfiguration200 = {
+  /**
+     * CONTACT_EMAIL, or null when missing or invalid
+     * @nullable
+     */
+  contactEmail: string | null;
+};
+
 export type GetAuthConfiguration200 = {
   configured: boolean;
   url: string;

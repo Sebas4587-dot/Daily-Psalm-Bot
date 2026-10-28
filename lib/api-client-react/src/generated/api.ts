@@ -22,6 +22,7 @@ import type {
 import type {
   ConversationPage,
   GetAuthConfiguration200,
+  GetPrivacyConfiguration200,
   HealthStatus,
   ListOpenaiConversationsParams,
   OpenaiConversation,
@@ -41,6 +42,83 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+
+
+export const getGetPrivacyConfigurationUrl = () => {
+
+
+
+
+  return `/api/privacy/configuration`
+}
+
+/**
+ * @summary Public privacy contact, available without authentication
+ */
+export const getPrivacyConfiguration = async ( options?: RequestInit): Promise<GetPrivacyConfiguration200> => {
+
+  return customFetch<GetPrivacyConfiguration200>(getGetPrivacyConfigurationUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPrivacyConfigurationQueryKey = () => {
+    return [
+    `/api/privacy/configuration`
+    ] as const;
+    }
+
+
+export const getGetPrivacyConfigurationQueryOptions = <TData = Awaited<ReturnType<typeof getPrivacyConfiguration>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrivacyConfiguration>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPrivacyConfigurationQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPrivacyConfiguration>>> = ({ signal }) => getPrivacyConfiguration({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPrivacyConfiguration>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPrivacyConfigurationQueryResult = NonNullable<Awaited<ReturnType<typeof getPrivacyConfiguration>>>
+export type GetPrivacyConfigurationQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Public privacy contact, available without authentication
+ */
+
+export function useGetPrivacyConfiguration<TData = Awaited<ReturnType<typeof getPrivacyConfiguration>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPrivacyConfiguration>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPrivacyConfigurationQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
 
 
 

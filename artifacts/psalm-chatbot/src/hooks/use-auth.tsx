@@ -46,6 +46,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     result: ReturnType<GoTrueClient["exchangeCodeForSession"]>;
   } | null>(null);
 
+  // Public pages unmount this provider; do not leave a second refresh loop behind.
+  useEffect(
+    () => () => {
+      clientRef.current?.client.stopAutoRefresh();
+    },
+    [],
+  );
+
   useEffect(() => {
     let alive = true;
     let initializing = true;

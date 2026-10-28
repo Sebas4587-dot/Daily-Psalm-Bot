@@ -9,6 +9,14 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Public privacy contact, available without authentication
+ */
+export const GetPrivacyConfigurationResponse = zod.object({
+  "contactEmail": zod.string().email().nullable().describe('CONTACT_EMAIL, or null when missing or invalid')
+})
+
+
+/**
  * @summary Public Supabase client configuration (never a secret key)
  */
 export const GetAuthConfigurationResponse = zod.object({

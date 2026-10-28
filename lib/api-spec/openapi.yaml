@@ -12,6 +12,26 @@ tags:
   - name: openai
     description: Bible guide conversations with Gemini
 paths:
+  /privacy/configuration:
+    get:
+      operationId: getPrivacyConfiguration
+      tags: [privacy]
+      security: []
+      summary: Public privacy contact, available without authentication
+      responses:
+        "200":
+          description: Only the public contact address, never credentials or user data
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [contactEmail]
+                properties:
+                  contactEmail:
+                    type: [string, "null"]
+                    format: email
+                    description: CONTACT_EMAIL, or null when missing or invalid
   /auth/configuration:
     get:
       operationId: getAuthConfiguration

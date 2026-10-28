@@ -8,6 +8,7 @@
 
 export * from './conversationPage';
 export * from './getAuthConfiguration200';
+export * from './getPrivacyConfiguration200';
 export * from './healthStatus';
 export * from './listOpenaiConversationsParams';
 export * from './openaiConversation';

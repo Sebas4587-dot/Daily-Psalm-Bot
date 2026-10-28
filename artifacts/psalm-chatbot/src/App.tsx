@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 
 const Chat = lazy(() => import("@/pages/chat"));
 const Login = lazy(() => import("@/pages/login"));
+const Privacy = lazy(() => import("@/pages/privacy"));
 
 const queryClient = new QueryClient();
 
@@ -28,11 +29,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/auth/callback" component={Login} />
       <Route path="/">
-        {session ? (
-          <Chat key={session.user.id} />
-        ) : (
-          <Redirect to="/login" />
-        )}
+        {session ? <Chat key={session.user.id} /> : <Redirect to="/login" />}
       </Route>
       <Route component={NotFound} />
     </Switch>
@@ -45,20 +42,25 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <AuthProvider>
-              <Suspense
-                fallback={
-                  <div
-                    role="status"
-                    className="grid min-h-[100dvh] place-items-center font-serif text-xl text-primary"
-                  >
-                    Abriendo tu espacio…
-                  </div>
-                }
-              >
-                <Router />
-              </Suspense>
-            </AuthProvider>
+            <Suspense
+              fallback={
+                <div
+                  role="status"
+                  className="grid min-h-[100dvh] place-items-center font-serif text-xl text-primary"
+                >
+                  Abriendo tu espacio…
+                </div>
+              }
+            >
+              <Switch>
+                <Route path="/privacidad" component={Privacy} />
+                <Route>
+                  <AuthProvider>
+                    <Router />
+                  </AuthProvider>
+                </Route>
+              </Switch>
+            </Suspense>
           </WouterRouter>
           <Toaster />
         </TooltipProvider>

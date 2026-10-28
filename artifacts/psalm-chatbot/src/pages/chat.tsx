@@ -7,6 +7,8 @@ import { PsalmCard } from "@/components/psalm-card";
 import { ScriptureCard } from "@/components/scripture-card";
 import { StoredGuideReplySchema, type StoredGuideReply } from "@workspace/api-zod";
 import { ConversationHistory } from "@/components/conversation-history";
+import { Link } from "wouter";
+import { PRIVACY_NOTICE } from "@/lib/privacy";
 
 const UI = {
   en: {
@@ -20,7 +22,7 @@ const UI = {
     welcomeBody: "Bring whatever is with you: a worry, a small joy, or something you can’t quite name. We’ll explore passages from across the Bible, with context and a reading in the Spanish NVI.",
     promptsLabel: "You might begin with",
     prompts: ["I feel a little overwhelmed", "I’m grateful for something today", "I need comfort and hope"],
-    privacy: "Share only what feels comfortable.",
+    privacy: "Privacy policy",
     greeting: "Welcome. Take a deep breath. How is your heart today?",
     errorTitle: "We couldn’t open your quiet space.",
     retry: "Try again",
@@ -40,7 +42,7 @@ const UI = {
     welcomeBody: "Trae contigo lo que sea: una preocupación, una pequeña alegría o algo que aún no sabes nombrar. Encontraremos pasajes de toda la Biblia, con su contexto y una lectura en la Nueva Versión Internacional.",
     promptsLabel: "Podrías comenzar con",
     prompts: ["Siento que todo me sobrepasa un poco", "Hoy agradezco algo", "Necesito consuelo y esperanza"],
-    privacy: "Comparte solo lo que te resulte cómodo.",
+    privacy: "Política de privacidad",
     greeting: "Bienvenido. Respira hondo. ¿Cómo está tu corazón hoy?",
     errorTitle: "No pudimos abrir tu espacio de calma.",
     retry: "Intentar de nuevo",
@@ -320,10 +322,11 @@ export default function Chat() {
               <ArrowUp className="h-[19px] w-[19px]" strokeWidth={2.2} aria-hidden="true" />
             </Button>
           </form>
-          <div className="flex items-center justify-between px-2 pt-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-2 pt-2.5">
             <p className="hidden text-[10px] text-muted-foreground/70 sm:block">{ui.hint}</p>
-            <p className="ml-auto text-[10px] tracking-[.025em] text-muted-foreground/65">{ui.privacy}</p>
+            <Link href={`/privacidad?lang=${language}`} className="ml-auto text-[11px] text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{ui.privacy}</Link>
           </div>
+          <p className="px-2 pt-1 text-[11px] leading-5 text-muted-foreground">{PRIVACY_NOTICE[language]}</p>
         </div>
       </footer>
     </main>

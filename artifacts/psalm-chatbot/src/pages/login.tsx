@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Redirect } from "wouter";
+import { Link, Redirect } from "wouter";
 import { BookOpen, Leaf, LockKeyhole, LoaderCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { PRIVACY_NOTICE } from "@/lib/privacy";
 
 function GoogleIcon() {
   return (
@@ -168,17 +169,23 @@ export default function Login() {
                 )}
                 {busy ? "Conectando con Google…" : "Continuar con Google"}
               </Button>
-              <p className="mt-4 text-center text-xs leading-6 text-muted-foreground">
-                Elige tu cuenta de Google y comienza a tu ritmo.
-              </p>
             </>
           )}
+          <p className="mt-4 text-center text-xs leading-6 text-muted-foreground">
+            Al continuar aceptas la{" "}
+            <Link
+              href="/privacidad?lang=es"
+              className="text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              política de privacidad
+            </Link>
+          </p>
           <div className="mt-8 border-t border-border/70 pt-5">
             <p className="flex items-center justify-center gap-2 text-xs font-medium text-primary">
               <LockKeyhole size={13} /> Un historial privado para cada cuenta
             </p>
             <p className="mt-3 text-center text-[11px] leading-6 text-muted-foreground">
-              Comparte solo lo que te resulte cómodo.
+              {PRIVACY_NOTICE.es}
               <br />
               Al terminar en un dispositivo compartido, cierra tu sesión.
             </p>

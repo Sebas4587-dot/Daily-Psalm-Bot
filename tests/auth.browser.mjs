@@ -132,6 +132,26 @@ try {
       .count(),
     0,
   );
+  await page
+    .getByText("Al continuar aceptas la política de privacidad", {
+      exact: true,
+    })
+    .waitFor();
+  await page
+    .getByRole("link", { name: "política de privacidad", exact: true })
+    .click();
+  await page
+    .getByRole("heading", {
+      level: 1,
+      name: "Política de privacidad",
+      exact: true,
+    })
+    .waitFor();
+  assert.equal(authorizations, 0, "Reading the policy must not start OAuth");
+  await page
+    .getByRole("link", { name: "Volver a la app", exact: true })
+    .click();
+  await page.getByTestId("button-google-login").waitFor();
   mkdirSync(".local", { recursive: true });
   await page.screenshot({
     path: ".local/google-login-desktop.png",
@@ -183,6 +203,46 @@ try {
   );
   await page.reload({ waitUntil: "networkidle" });
   await page.getByTestId("scripture-card").first().waitFor();
+  await page
+    .locator("footer")
+    .getByRole("link", { name: "Política de privacidad", exact: true })
+    .click();
+  await page
+    .getByRole("heading", {
+      level: 1,
+      name: "Política de privacidad",
+      exact: true,
+    })
+    .waitFor();
+  assert.equal(
+    await page.getByTestId("scripture-card").count(),
+    0,
+    "Public page must not expose chat content",
+  );
+  assert.ok(
+    await page.evaluate(
+      (key) => Boolean(localStorage.getItem(key)),
+      storageKey,
+    ),
+    "Policy navigation must preserve the signed-in session",
+  );
+  await page
+    .getByRole("link", { name: "Volver a la app", exact: true })
+    .click();
+  await page.getByTestId("scripture-card").first().waitFor();
+  await page.getByTestId("button-lang-en").click();
+  await page
+    .locator("footer")
+    .getByRole("link", { name: "Privacy policy", exact: true })
+    .click();
+  await page
+    .getByRole("heading", { level: 1, name: "Privacy policy", exact: true })
+    .waitFor();
+  await page
+    .getByRole("link", { name: "Back to the app", exact: true })
+    .click();
+  await page.getByTestId("scripture-card").first().waitFor();
+  await page.getByTestId("button-lang-es").click();
   await page
     .getByRole("button", { name: "Cerrar sesión", exact: true })
     .click();
@@ -309,6 +369,22 @@ try {
     .click();
   await productionPage.getByTestId("scripture-card").first().waitFor();
   await productionPage
+    .locator("footer")
+    .getByRole("link", { name: "Política de privacidad", exact: true })
+    .click();
+  await productionPage
+    .getByRole("heading", {
+      level: 1,
+      name: "Política de privacidad",
+      exact: true,
+    })
+    .waitFor();
+  assert.equal(new URL(productionPage.url()).origin, productionOrigin);
+  await productionPage
+    .getByRole("link", { name: "Volver a la app", exact: true })
+    .click();
+  await productionPage.getByTestId("scripture-card").first().waitFor();
+  await productionPage
     .getByTestId("input-message")
     .fill("Quiero continuar esta reflexión desde producción.");
   await productionPage.getByTestId("button-send-message").click();
@@ -378,5 +454,5 @@ try {
   await fixture.cleanup();
 }
 console.log(
-  "PASS: Google button, PKCE callback/error/retry, local :20874 and canonical production redirects, persistence, logout/account switching, private conversations and mobile layout. Temporary users removed.",
+  "PASS: Google button, PKCE callback/error/retry, local :20874 and canonical production redirects, public privacy links in both languages, persistence, logout/account switching, private conversations and mobile layout. Temporary users removed.",
 );

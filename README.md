@@ -39,6 +39,11 @@ Requiere Node.js 20.19 o superior y pnpm 10.32.1. Se recomienda Node.js 22 o 24.
    interfaz en <http://127.0.0.1:20874>. Los datos y las respuestas vienen de los
    servicios remotos configurados.
 
+Configura también `CONTACT_EMAIL` en `.env` con un correo real que administres
+para consultas de privacidad. Se mostrará públicamente; no pongas una contraseña
+ni una clave en esa variable. Si está vacío o no es una dirección válida, la
+política indica que el contacto está pendiente, sin inventar uno.
+
 El arranque carga `.env`; las variables del entorno del alojamiento tienen prioridad.
 Los comandos individuales de paquetes requieren que el entorno ya esté cargado.
 
@@ -110,6 +115,44 @@ respuesta. Privacidad entre cuentas no significa cifrado de extremo a extremo.
 Las conversaciones antiguas identificadas solo por cookie se conservan sin
 asignar; no se transfieren automáticamente a quien cree una cuenta en ese navegador.
 
+## Política y aviso de privacidad
+
+La ruta **`/privacidad` es pública y no depende de una sesión ni de la disponibilidad
+de Google Auth**. Está disponible en español (`/privacidad?lang=es`, predeterminado)
+e inglés (`/privacidad?lang=en`), con selector de idioma y enlaces desde el login
+y el pie del chat. Bajo el botón de Google aparece «Al continuar aceptas la
+política de privacidad». No se registra una aceptación por separado en la base
+de datos. El login y el chat muestran además un aviso de privacidad sobre Gemini
+y piden no compartir datos muy sensibles.
+
+La política describe el nombre, correo y metadatos básicos de Google en Supabase
+Auth para identificar la cuenta, el historial ligado a su UUID en Supabase y el
+envío de mensajes y respuestas previas a la API de Gemini. El nivel gratuito de
+Gemini puede usar ese contenido para mejorar productos de Google y permitir
+revisión humana, según sus [condiciones](https://ai.google.dev/gemini-api/terms).
+La app no añade automáticamente el nombre, correo o UUID al contexto de Gemini.
+
+No se venden datos ni se comparten con terceros ajenos a los servicios descritos
+en la política. Se explican expresamente Supabase, Google, las tipografías de
+Google Fonts, las referencias enviadas a API.Bible si se habilita y los enlaces
+externos de lectura. La privacidad entre usuarios no implica cifrado de extremo
+a extremo. El usuario puede borrar conversaciones y sus mensajes desde el
+historial; esto no elimina la cuenta ni revierte el procesamiento previo de los
+proveedores. También se aclara que la reflexión bíblica no es consejo profesional
+y que una crisis requiere ayuda humana o servicios de emergencia locales.
+
+`GET /api/privacy/configuration` es público y devuelve únicamente
+`{ "contactEmail": ... }`, con `contactEmail: null` si la variable falta o es inválida.
+No publica credenciales ni datos de usuarios. Se lee desde el servidor al arrancar:
+tras cambiar `.env`, reinicia la app; no requiere recompilar la interfaz.
+Si falla esa petición, la política sigue legible y se informa de que el contacto
+no pudo cargarse.
+
+En producción, la URL será `https://tu-dominio.example/privacidad` (con el prefijo
+de `BASE_PATH` si lo utilizas). Puedes usarla como URL de política de privacidad
+en la configuración de consentimiento de Google una vez publicada la app.
+`APP_ORIGIN` y el callback OAuth siguen funcionando como antes.
+
 ## Recomendaciones y NVI
 
 Gemini recibe todos los mensajes aceptados de la conversación y puede recomendar
@@ -138,9 +181,14 @@ no se cambia de modelo ni se activa un proveedor de pago automáticamente.
 ## Verificación
 
 - `pnpm test`: referencias bíblicas, contexto de Gemini, SSE, validación de
-  credenciales públicas, destinos OAuth y protección de la API.
+  credenciales públicas, destinos OAuth, protección de la API y validación del
+  contacto público de privacidad.
 - `pnpm typecheck`: verificación de tipos de todo el workspace.
 - `pnpm build`: tipos y compilación de servidor e interfaz.
+- `pnpm test:privacy:browser`: después de compilar, verifica `/privacidad` sin
+  sesión, ambos idiomas, contacto configurado/ausente y fallos de configuración.
+  No requiere `.env`, base de datos, Google ni Gemini; mantiene Auth sin configurar,
+  usa la ruta real del contacto y simula fallos de su carga.
 - `pnpm test:auth`: después de compilar, comprueba el intercambio PKCE real de
   Supabase, renovación/cierre de sesión, aislamiento entre dos usuarios,
   paginación y RLS. Crea identidades temporales de Google y estados OAuth de
@@ -150,7 +198,8 @@ no se cambia de modelo ni se activa un proveedor de pago automáticamente.
   móvil, usando `http://127.0.0.1:20874` y un origen HTTPS de producción controlado.
   El consentimiento externo de Google se sustituye por códigos de prueba, que
   se intercambian de verdad con Supabase. Incluye comprobaciones de privacidad
-  tras cerrar o cambiar la cuenta.
+  tras cerrar o cambiar la cuenta y navegación desde login/chat a la política
+  sin perder el historial ni romper el acceso.
 
 Las pruebas de Auth requieren `.env`, acceso al proyecto y permisos de migración
 en PostgreSQL. Eliminan sus usuarios y datos al terminar. Las respuestas de
