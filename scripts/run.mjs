@@ -10,6 +10,9 @@ if (!process.env.DATABASE_URL?.trim()) throw new Error("Configura DATABASE_URL c
 if (command !== "db:setup" && !(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)) {
   throw new Error("Configura GEMINI_API_KEY en .env para activar las recomendaciones bíblicas con Gemini.");
 }
+if (command !== "db:setup" && (!process.env.SUPABASE_URL?.trim() || !(process.env.SUPABASE_PUBLISHABLE_KEY?.trim() || process.env.SUPABASE_ANON_KEY?.trim()))) {
+  throw new Error("Configura SUPABASE_URL y SUPABASE_PUBLISHABLE_KEY en .env para activar las cuentas y el historial privado.");
+}
 const children = new Set();
 let stopping = false;
 function stop(code = 0) {

@@ -5,14 +5,21 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-export interface HealthStatus {
-  status: string;
-}
-
 export interface OpenaiConversation {
   id: number;
   title: string;
+  updatedAt: string;
   createdAt: string;
+}
+
+export interface ConversationPage {
+  conversations: OpenaiConversation[];
+  /** @nullable */
+  nextCursor: string | null;
+}
+
+export interface HealthStatus {
+  status: string;
 }
 
 export interface OpenaiMessage {
@@ -51,6 +58,7 @@ export interface OpenaiMessageInput {
 export interface OpenaiConversationWithMessages {
   id: number;
   title: string;
+  updatedAt: string;
   createdAt: string;
   messages: OpenaiMessage[];
 }
@@ -58,4 +66,21 @@ export interface OpenaiConversationWithMessages {
 export interface OpenaiError {
   error: string;
 }
+
+export type GetAuthConfiguration200 = {
+  configured: boolean;
+  url: string;
+  publishableKey: string;
+  /** Canonical APP_ORIGIN, or empty to use the browser origin in local development */
+  appOrigin: string;
+};
+
+export type ListOpenaiConversationsParams = {
+cursor?: string;
+/**
+ * Search by title
+ * @maxLength 120
+ */
+q?: string;
+};
 

@@ -10,10 +10,35 @@ tags:
   - name: health
     description: Health operations
   - name: openai
-    description: OpenAI AI chat operations
+    description: Bible guide conversations with Gemini
 paths:
+  /auth/configuration:
+    get:
+      operationId: getAuthConfiguration
+      tags: [auth]
+      security: []
+      summary: Public Supabase client configuration (never a secret key)
+      responses:
+        "200":
+          description: Auth configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [configured, url, publishableKey, appOrigin]
+                properties:
+                  configured:
+                    type: boolean
+                  url:
+                    type: string
+                  publishableKey:
+                    type: string
+                  appOrigin:
+                    type: string
+                    description: Canonical APP_ORIGIN, or empty to use the browser origin in local development
   /healthz:
     get:
+      security: []
       operationId: healthCheck
       tags: [health]
       summary: Health check
@@ -29,16 +54,25 @@ paths:
     get:
       operationId: listOpenaiConversations
       tags: [openai]
-      summary: List conversations owned by the current browser session
+      summary: List the authenticated user's conversations, most recently updated first
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          description: Search by title
+          schema:
+            type: string
+            maxLength: 120
       responses:
         "200":
-          description: List of conversations
+          description: A page of up to 40 conversations
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/OpenaiConversation"
+                $ref: "#/components/schemas/ConversationPage"
     post:
       operationId: createOpenaiConversation
       tags: [openai]
@@ -80,6 +114,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OpenaiError"
+    patch:
+      operationId: renameOpenaiConversation
+      tags: [openai]
+      summary: Rename a conversation owned by the authenticated user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenaiConversationInput"
+      responses:
+        "200":
+          description: Updated conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiConversation"
+        "404":
+          description: Not found
     delete:
       operationId: deleteOpenaiConversation
       tags: [openai]
@@ -140,8 +199,25 @@ paths:
           description: SSE stream of assistant text chunks
           content:
             text/event-stream: {}
+security:
+  - bearerAuth: []
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
+    ConversationPage:
+      type: object
+      required: [conversations, nextCursor]
+      properties:
+        conversations:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpenaiConversation"
+        nextCursor:
+          type: [string, "null"]
     HealthStatus:
       type: object
       properties:
@@ -156,12 +232,16 @@ components:
           type: integer
         title:
           type: string
+        updatedAt:
+          type: string
+          format: date-time
         createdAt:
           type: string
           format: date-time
       required:
         - id
         - title
+        - updatedAt
         - createdAt
     OpenaiMessage:
       type: object
@@ -211,6 +291,9 @@ components:
           type: integer
         title:
           type: string
+        updatedAt:
+          type: string
+          format: date-time
         createdAt:
           type: string
           format: date-time
@@ -221,6 +304,7 @@ components:
       required:
         - id
         - title
+        - updatedAt
         - createdAt
         - messages
     OpenaiError:

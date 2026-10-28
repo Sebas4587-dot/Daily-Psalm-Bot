@@ -20,7 +20,10 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ConversationPage,
+  GetAuthConfiguration200,
   HealthStatus,
+  ListOpenaiConversationsParams,
   OpenaiConversation,
   OpenaiConversationInput,
   OpenaiConversationWithMessages,
@@ -38,6 +41,83 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+
+
+export const getGetAuthConfigurationUrl = () => {
+
+
+
+
+  return `/api/auth/configuration`
+}
+
+/**
+ * @summary Public Supabase client configuration (never a secret key)
+ */
+export const getAuthConfiguration = async ( options?: RequestInit): Promise<GetAuthConfiguration200> => {
+
+  return customFetch<GetAuthConfiguration200>(getGetAuthConfigurationUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAuthConfigurationQueryKey = () => {
+    return [
+    `/api/auth/configuration`
+    ] as const;
+    }
+
+
+export const getGetAuthConfigurationQueryOptions = <TData = Awaited<ReturnType<typeof getAuthConfiguration>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuthConfiguration>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAuthConfigurationQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuthConfiguration>>> = ({ signal }) => getAuthConfiguration({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuthConfiguration>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAuthConfigurationQueryResult = NonNullable<Awaited<ReturnType<typeof getAuthConfiguration>>>
+export type GetAuthConfigurationQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Public Supabase client configuration (never a secret key)
+ */
+
+export function useGetAuthConfiguration<TData = Awaited<ReturnType<typeof getAuthConfiguration>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuthConfiguration>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAuthConfigurationQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
 
 
 
@@ -119,20 +199,27 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
-export const getListOpenaiConversationsUrl = () => {
+export const getListOpenaiConversationsUrl = (params?: ListOpenaiConversationsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/openai/conversations`
+  return stringifiedParams.length > 0 ? `/api/openai/conversations?${stringifiedParams}` : `/api/openai/conversations`
 }
 
 /**
- * @summary List conversations owned by the current browser session
+ * @summary List the authenticated user's conversations, most recently updated first
  */
-export const listOpenaiConversations = async ( options?: RequestInit): Promise<OpenaiConversation[]> => {
+export const listOpenaiConversations = async (params?: ListOpenaiConversationsParams, options?: RequestInit): Promise<ConversationPage> => {
 
-  return customFetch<OpenaiConversation[]>(getListOpenaiConversationsUrl(),
+  return customFetch<ConversationPage>(getListOpenaiConversationsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -145,23 +232,23 @@ export const listOpenaiConversations = async ( options?: RequestInit): Promise<O
 
 
 
-export const getListOpenaiConversationsQueryKey = () => {
+export const getListOpenaiConversationsQueryKey = (params?: ListOpenaiConversationsParams,) => {
     return [
-    `/api/openai/conversations`
+    `/api/openai/conversations`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListOpenaiConversationsQueryOptions = <TData = Awaited<ReturnType<typeof listOpenaiConversations>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpenaiConversations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListOpenaiConversationsQueryOptions = <TData = Awaited<ReturnType<typeof listOpenaiConversations>>, TError = ErrorType<unknown>>(params?: ListOpenaiConversationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpenaiConversations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListOpenaiConversationsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListOpenaiConversationsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOpenaiConversations>>> = ({ signal }) => listOpenaiConversations({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOpenaiConversations>>> = ({ signal }) => listOpenaiConversations(params, { signal, ...requestOptions });
 
 
 
@@ -175,15 +262,15 @@ export type ListOpenaiConversationsQueryError = ErrorType<unknown>
 
 
 /**
- * @summary List conversations owned by the current browser session
+ * @summary List the authenticated user's conversations, most recently updated first
  */
 
 export function useListOpenaiConversations<TData = Awaited<ReturnType<typeof listOpenaiConversations>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpenaiConversations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListOpenaiConversationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpenaiConversations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListOpenaiConversationsQueryOptions(options)
+  const queryOptions = getListOpenaiConversationsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -343,6 +430,78 @@ export function useGetOpenaiConversation<TData = Awaited<ReturnType<typeof getOp
 
 
 
+
+export const getRenameOpenaiConversationUrl = (id: number,) => {
+
+
+
+
+  return `/api/openai/conversations/${id}`
+}
+
+/**
+ * @summary Rename a conversation owned by the authenticated user
+ */
+export const renameOpenaiConversation = async (id: number,
+    openaiConversationInput: OpenaiConversationInput, options?: RequestInit): Promise<OpenaiConversation> => {
+
+  return customFetch<OpenaiConversation>(getRenameOpenaiConversationUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      openaiConversationInput,)
+  }
+);}
+
+
+
+
+export const getRenameOpenaiConversationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof renameOpenaiConversation>>, TError,{id: number;data: BodyType<OpenaiConversationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof renameOpenaiConversation>>, TError,{id: number;data: BodyType<OpenaiConversationInput>}, TContext> => {
+
+const mutationKey = ['renameOpenaiConversation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof renameOpenaiConversation>>, {id: number;data: BodyType<OpenaiConversationInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  renameOpenaiConversation(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RenameOpenaiConversationMutationResult = NonNullable<Awaited<ReturnType<typeof renameOpenaiConversation>>>
+    export type RenameOpenaiConversationMutationBody = BodyType<OpenaiConversationInput>
+    export type RenameOpenaiConversationMutationError = ErrorType<void>
+
+    /**
+ * @summary Rename a conversation owned by the authenticated user
+ */
+export const useRenameOpenaiConversation = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof renameOpenaiConversation>>, TError,{id: number;data: BodyType<OpenaiConversationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof renameOpenaiConversation>>,
+        TError,
+        {id: number;data: BodyType<OpenaiConversationInput>},
+        TContext
+      > => {
+      return useMutation(getRenameOpenaiConversationMutationOptions(options));
+    }
 
 export const getDeleteOpenaiConversationUrl = (id: number,) => {
 

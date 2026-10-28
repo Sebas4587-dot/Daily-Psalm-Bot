@@ -9,5 +9,6 @@
 export interface OpenaiConversation {
   id: number;
   title: string;
+  updatedAt: Date;
   createdAt: Date;
 }

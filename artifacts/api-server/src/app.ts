@@ -1,5 +1,4 @@
 import express, { type Express, type ErrorRequestHandler } from "express";
-import cookieParser from "cookie-parser";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,7 +28,6 @@ app.use(
     },
   }),
 );
-app.use(cookieParser());
 app.use(express.json({ limit: "16kb" }));
 
 app.use("/api", router);

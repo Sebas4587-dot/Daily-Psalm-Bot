@@ -9,6 +9,17 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Public Supabase client configuration (never a secret key)
+ */
+export const GetAuthConfigurationResponse = zod.object({
+  "configured": zod.boolean(),
+  "url": zod.string(),
+  "publishableKey": zod.string(),
+  "appOrigin": zod.string().describe('Canonical APP_ORIGIN, or empty to use the browser origin in local development')
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */
@@ -18,14 +29,26 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
- * @summary List conversations owned by the current browser session
+ * @summary List the authenticated user's conversations, most recently updated first
  */
-export const ListOpenaiConversationsResponseItem = zod.object({
+export const listOpenaiConversationsQueryQMax = 120;
+
+
+
+export const ListOpenaiConversationsQueryParams = zod.object({
+  "cursor": zod.coerce.string().optional(),
+  "q": zod.coerce.string().max(listOpenaiConversationsQueryQMax).optional().describe('Search by title')
+})
+
+export const ListOpenaiConversationsResponse = zod.object({
+  "conversations": zod.array(zod.object({
   "id": zod.number(),
   "title": zod.string(),
+  "updatedAt": zod.coerce.date(),
   "createdAt": zod.coerce.date()
+})),
+  "nextCursor": zod.string().nullable()
 })
-export const ListOpenaiConversationsResponse = zod.array(ListOpenaiConversationsResponseItem)
 
 
 /**
@@ -50,6 +73,7 @@ export const GetOpenaiConversationParams = zod.object({
 export const GetOpenaiConversationResponse = zod.object({
   "id": zod.number(),
   "title": zod.string(),
+  "updatedAt": zod.coerce.date(),
   "createdAt": zod.coerce.date(),
   "messages": zod.array(zod.object({
   "id": zod.number(),
@@ -58,6 +82,29 @@ export const GetOpenaiConversationResponse = zod.object({
   "content": zod.string(),
   "createdAt": zod.coerce.date()
 }))
+})
+
+
+/**
+ * @summary Rename a conversation owned by the authenticated user
+ */
+export const RenameOpenaiConversationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const renameOpenaiConversationBodyTitleMax = 120;
+
+
+
+export const RenameOpenaiConversationBody = zod.object({
+  "title": zod.string().min(1).max(renameOpenaiConversationBodyTitleMax)
+})
+
+export const RenameOpenaiConversationResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "updatedAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date()
 })
 
 

@@ -6,7 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './conversationPage';
+export * from './getAuthConfiguration200';
 export * from './healthStatus';
+export * from './listOpenaiConversationsParams';
 export * from './openaiConversation';
 export * from './openaiConversationInput';
 export * from './openaiConversationWithMessages';

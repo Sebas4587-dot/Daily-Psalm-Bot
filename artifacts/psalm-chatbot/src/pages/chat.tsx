@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { ArrowUp, Check, CircleAlert, Leaf, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowUp, Check, CircleAlert, LockKeyhole, Menu, RotateCcw, Sparkles } from "lucide-react";
 import { useChatSession, type Language } from "@/hooks/use-chat-session";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PsalmCard } from "@/components/psalm-card";
 import { ScriptureCard } from "@/components/scripture-card";
 import { StoredGuideReplySchema, type StoredGuideReply } from "@workspace/api-zod";
+import { ConversationHistory } from "@/components/conversation-history";
 
 const UI = {
   en: {
@@ -87,7 +88,9 @@ export default function Chat() {
     if (savedLanguage === "en" || savedLanguage === "es") return savedLanguage;
     return navigator.language.toLowerCase().startsWith("es") ? "es" : "en";
   });
-  const { messages, sendMessage, isStreaming, initSession, isInitializing, sessionError, retryMessage } = useChatSession(language);
+  const chat = useChatSession(language);
+  const { messages, sendMessage, isStreaming, initSession, isInitializing, sessionError, retryMessage, retrySession } = chat;
+  const [mobileHistory, setMobileHistory] = useState(false);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -104,6 +107,7 @@ export default function Chat() {
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, isStreaming]);
+  useEffect(() => { setInput(""); }, [chat.conversationId]);
 
   const submitMessage = (value: string) => {
     const trimmed = value.trim();
@@ -134,19 +138,19 @@ export default function Chat() {
   };
 
   return (
-    <main className="psalm-shell soft-grain flex h-[100dvh] min-h-[520px] flex-col overflow-hidden text-foreground">
+    <div className="flex h-[100dvh] overflow-hidden">
+    <ConversationHistory chat={chat} language={language} mobileOpen={mobileHistory} onMobileChange={setMobileHistory} />
+    <main className="psalm-shell soft-grain flex h-[100dvh] min-h-[520px] min-w-0 flex-1 flex-col overflow-hidden text-foreground">
       <header className="relative z-10 flex shrink-0 items-center justify-between border-b border-border/55 bg-background/75 px-4 py-3 backdrop-blur-md sm:px-8 sm:py-4">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-2xl border border-primary/10 bg-primary/8 text-primary">
-            <Leaf aria-hidden="true" className="h-[18px] w-[18px]" strokeWidth={1.7} />
-          </div>
-          <div>
-            <h1 className="font-serif text-[21px] font-semibold leading-none tracking-[-.035em] text-primary sm:text-2xl">{language === "es" ? "Guía bíblica" : "BibleGuide"}</h1>
-            <p className="mt-1 hidden text-[10px] font-semibold uppercase tracking-[.19em] text-muted-foreground sm:block">{ui.brandSubtitle}</p>
+        <div className="flex min-w-0 items-center gap-3 pr-2">
+          <button type="button" onClick={() => setMobileHistory(true)} aria-label={language === "es" ? "Abrir historial" : "Open history"} className="rounded-xl border border-border p-2.5 text-primary focus-visible:ring-2 focus-visible:ring-primary lg:hidden"><Menu size={18} /></button>
+          <div className="min-w-0">
+            <h1 className="truncate font-serif text-lg font-medium leading-tight tracking-tight text-primary sm:text-xl">{chat.conversationTitle ?? (language === "es" ? "Tu espacio de calma" : "Your quiet space")}</h1>
+            <p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground"><LockKeyhole size={10} aria-hidden="true" />{language === "es" ? "Conversación privada · NVI" : "Private conversation · NVI"}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           <div className="flex rounded-full border border-border/80 bg-background/75 p-1" aria-label={ui.language} data-testid="language-toggle">
             {(["en", "es"] as const).map((lang) => (
               <button
@@ -167,8 +171,8 @@ export default function Chat() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => initSession(language)}
-            disabled={isInitializing}
+            onClick={initSession}
+            disabled={isInitializing || isStreaming}
             className="h-9 rounded-full px-2 text-muted-foreground transition-colors hover:bg-primary/7 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-3"
             data-testid="button-new-session"
           >
@@ -188,7 +192,7 @@ export default function Chat() {
               </div>
               <p className="font-serif text-2xl text-foreground">{ui.errorTitle}</p>
               <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{sessionError}</p>
-              <Button onClick={() => initSession(language)} className="mt-6 rounded-full px-5 focus-visible:ring-2 focus-visible:ring-primary/40" data-testid="button-retry-session">
+              <Button onClick={retrySession} className="mt-6 rounded-full px-5 focus-visible:ring-2 focus-visible:ring-primary/40" data-testid="button-retry-session">
                 <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />{ui.retry}
               </Button>
             </section>
@@ -323,5 +327,6 @@ export default function Chat() {
         </div>
       </footer>
     </main>
+    </div>
   );
 }
